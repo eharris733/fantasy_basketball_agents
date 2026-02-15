@@ -131,8 +131,9 @@ RULES:
 - "pass" = let the bidder win this player at the current price
 - "counter" = raise the bid (must be higher than {current_bid}, cannot exceed your balance of {balance})
 - Only your top 5 players by fantasy points count for scoring
+- You have a maximum of 12 slots, but can only score for the top 5.
 - If your opponent has 0 credits, they cannot counter — you will win at any bid
-
+- Each player starts with 100 credits, meaing the average active roster player is worth about 20 credits.
 Decide: counter or pass. Follow your strategy."""
 
     result = await structured.ainvoke(prompt)
