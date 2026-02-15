@@ -12,7 +12,7 @@ class InitialBidAction(BaseModel):
 
 class BidResponseAction(BaseModel):
     """Bot's response to an existing bid."""
-    action: str = Field(description="One of: counter, accept, fold")
+    action: str = Field(description="One of: counter, pass")
     amount: int = Field(default=0, description="Counter bid amount (only if action is counter)")
     reasoning: str = Field(description="Brief explanation of the decision")
 
@@ -77,6 +77,7 @@ RULES:
 - Only your top 5 players by fantasy points count for scoring
 - Consider which players would most improve your team
 - Consider blocking opponent from getting key players
+- If your opponent has 0 credits, they cannot counter — you will win at any bid, so bid the minimum (1 credit)
 
 Pick a player and opening bid amount. Follow your strategy."""
 
@@ -127,27 +128,25 @@ OPPONENT BALANCE: {opponent_balance} credits
 REMAINING PLAYERS IN POOL: {len(available_players)}
 
 RULES:
-- "accept" = let the bidder win this player at the current price
+- "pass" = let the bidder win this player at the current price
 - "counter" = raise the bid (must be higher than {current_bid}, cannot exceed your balance of {balance})
-- "fold" = give up on this player, bidder wins at current price
 - Only your top 5 players by fantasy points count for scoring
+- If your opponent has 0 credits, they cannot counter — you will win at any bid
 
-Decide: counter, accept, or fold. Follow your strategy."""
+Decide: counter or pass. Follow your strategy."""
 
     result = await structured.ainvoke(prompt)
 
-    # Validate action
-    if result.action not in ("counter", "accept", "fold"):
-        result.action = "fold"
+    # Normalize: anything that isn't "counter" is a pass
+    if result.action != "counter":
+        result.action = "pass"
 
     if result.action == "counter":
-        # Must be higher than current bid and within balance
         if result.amount <= current_bid or result.amount > balance:
-            # Can't make a valid counter, fold instead
             if current_bid + 1 <= balance:
                 result.amount = min(current_bid + 1, balance)
             else:
-                result.action = "fold"
+                result.action = "pass"
                 result.amount = 0
 
     return result

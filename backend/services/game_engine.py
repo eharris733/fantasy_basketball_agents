@@ -182,18 +182,9 @@ async def run_game_stream(bot1: dict, bot2: dict):
                 game_log.append(msg)
                 yield {"type": "log", "message": msg}
                 await asyncio.sleep(0)
-            elif response.action == "accept":
+            else:  # pass
                 msg = (
-                    f"{responding_bot['name']} accepts. "
-                    f"{bidder_bot['name']} wins {player['first_name']} {player['last_name']} for {current_bid}!"
-                )
-                game_log.append(msg)
-                yield {"type": "log", "message": msg}
-                await asyncio.sleep(0)
-                break
-            else:  # fold
-                msg = (
-                    f"{responding_bot['name']} folds. "
+                    f"{responding_bot['name']} passes. "
                     f"{bidder_bot['name']} wins {player['first_name']} {player['last_name']} for {current_bid}!"
                 )
                 game_log.append(msg)

@@ -99,7 +99,7 @@ class LeaderboardEntry(BaseModel):
 # --- Bot Brain ---
 
 class BotBidAction(BaseModel):
-    action: str  # "bid", "counter", "accept", "fold"
+    action: str  # "bid", "counter", "pass"
     player_id: Optional[int] = None
     amount: Optional[int] = None
     reasoning: str
