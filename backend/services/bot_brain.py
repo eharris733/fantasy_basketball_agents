@@ -1,4 +1,4 @@
-from langchain_openai import ChatOpenAI
+from openai import AsyncOpenAI
 from pydantic import BaseModel, Field
 from config import settings
 
@@ -17,12 +17,8 @@ class BidResponseAction(BaseModel):
     reasoning: str = Field(description="Brief explanation of the decision")
 
 
-def _build_llm():
-    return ChatOpenAI(
-        model="gpt-4o-mini",
-        api_key=settings.openai_api_key,
-        temperature=0.7,
-    )
+def _build_client():
+    return AsyncOpenAI(api_key=settings.openai_api_key)
 
 
 def _format_player(p: dict) -> str:
@@ -50,8 +46,7 @@ async def get_initial_bid(
     my_team: list[dict],
     opponent_team: list[dict],
 ) -> InitialBidAction:
-    llm = _build_llm()
-    structured = llm.with_structured_output(InitialBidAction)
+    client = _build_client()
 
     players_str = "\n".join(_format_player(p) for p in available_players)
     my_team_str = _format_team(my_team)
@@ -81,12 +76,17 @@ RULES:
 
 Pick a player and opening bid amount. Follow your strategy."""
 
-    result = await structured.ainvoke(prompt)
+    completion = await client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        temperature=0.7,
+        messages=[{"role": "user", "content": prompt}],
+        response_format=InitialBidAction,
+    )
+    result = completion.choices[0].message.parsed
 
     # Validate
     valid_ids = {p["id"] for p in available_players}
     if result.player_id not in valid_ids:
-        # Fallback: pick highest fantasy points available
         best = max(available_players, key=lambda p: p["fantasy_points"])
         result.player_id = best["id"]
     result.amount = max(1, min(result.amount, balance))
@@ -105,8 +105,7 @@ async def get_bid_response(
     opponent_team: list[dict],
     available_players: list[dict],
 ) -> BidResponseAction:
-    llm = _build_llm()
-    structured = llm.with_structured_output(BidResponseAction)
+    client = _build_client()
 
     my_team_str = _format_team(my_team)
     opp_team_str = _format_team(opponent_team)
@@ -136,7 +135,13 @@ RULES:
 - Each player starts with 100 credits, meaing the average active roster player is worth about 20 credits.
 Decide: counter or pass. Follow your strategy."""
 
-    result = await structured.ainvoke(prompt)
+    completion = await client.beta.chat.completions.parse(
+        model="gpt-4o-mini",
+        temperature=0.7,
+        messages=[{"role": "user", "content": prompt}],
+        response_format=BidResponseAction,
+    )
+    result = completion.choices[0].message.parsed
 
     # Normalize: anything that isn't "counter" is a pass
     if result.action != "counter":
